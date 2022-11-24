@@ -1,0 +1,352 @@
+---
+title: "Representación digital de señales analógicas."
+subtitle: "Electrónica II para Ing. Electrónica."
+date: "24/11/2022"
+author: "Fernando Alberto Miranda Bonomi"
+format: revealjs
+jupyter: python3
+---
+
+## Señales analógicas y digitales
+
+Señal: variación de una magnitud física que se usa para transmitir información. 
+
+```{python}
+#| label: fig1
+#| fig-cap: "Ejemplo de señal $\\operatorname{sen}(2\\pi t)$"
+import numpy as np
+import matplotlib.pyplot as plt
+formato_1 = {
+    "font.size":20,
+    "lines.linewidth":4,
+    "lines.markersize":6/1.5*4,
+    "figure.dpi":200,
+    "figure.figsize":[10,6]}
+def fig1():
+    with plt.rc_context(formato_1):
+        t = np.linspace(0,1,200)
+        y = np.sin(2*np.pi*t)
+        plt.figure(1)
+        plt.plot(t,y)
+        plt.xlim(0,1)
+        plt.show()
+fig1()
+```
+
+## Señal analógica
+
+Varía de forma contínua. La información es representada por su valor en forma directa.
+
+```{python}
+#| label: fig2
+#| fig-cap: "Señal analógica: nivel de agua en un depósito."
+def fig2():
+    with plt.rc_context(formato_1):
+        t = np.linspace(0,10,200)
+        y = (1+0.2*t)*(t<5)+2.0*(t>=5)*(t<7)+(2-0.1*(t-7))*(t>=7)
+        plt.figure(2)
+        plt.plot(t,y)
+        plt.xlim(0,10)
+        plt.xlabel("t (minutos)")
+        plt.draw()
+fig2()
+```
+
+## Señal digital
+
+Es una señal que toma valores discretos que representan símbolos (números).
+
+```{python}
+#| label: fig3
+#| fig-cap: "Señal digital: transmisión serie 9600-8-n-1 del byte 0x5A"
+
+def fig3():
+    with plt.rc_context(formato_1):
+        r = 9600
+        ts = 1/r
+        sps = 20
+        t = 1000*np.linspace(-2*ts,10*ts,12*sps)
+        y = np.repeat([1,1,0,0,1,0,1,1,0,1,0,1],sps)
+        plt.figure(3)
+        plt.plot(t,y)
+        plt.xlim(np.min(t),np.max(t))
+        plt.xlabel("t (ms)")
+        plt.show()
+fig3()
+```
+
+## Analógico vs digital
+
+:::: {.columns}
+
+::: {.column width="49%"}
+
+Señal Analógica
+
+- Toma valores de un conjunto contínuo.
+- Varía en forma contínua con el tiempo.
+
+:::
+
+::: {.column width="2%"}
+
+:::
+
+::: {.column width="49%"}
+
+Una señal digital
+
+- Toma valores de un conjunto discreto.
+- Varía de forma "discontinua" en el tiempo.
+
+:::
+
+::::
+
+## Analógico
+
+- La descripción exacta de una señal analógica contiene infinita información. 🙂
+  - Variación contínua en el tiempo.
+  - Variación contínua en valor.
+- No podemos aprovechar toda esa información. 😠
+  - Existe ruido e incertidumbre de medida.
+  - El ancho de banda es limitado y por lo tanto también tiene límite la variación temporal.
+
+## Representación digital
+
+::: {.incremental}
+
+- Las señales digitales son equivalentes a números de precisión finita.
+- Todo lo que podemos medir lo podemos representar por números de precisión finita (hay incertidumbre de medida).
+- Por lo tanto *podemos representar la información medible de una señal analógica mediante una señal digital*.👽
+
+:::
+
+## Conversión analógica a digital.
+
+- *Muestreo*: Medimos la señal analógica periódicamente para capturar la variación en el tiempo.
+- *Cuantización*: Describimos el resultado de cada medición por un número de precisión finita.
+- *Codificación*: Representamos los números de alguna manera en el sistema digital.
+
+----
+
+### Muestreo
+
+La frecuencia con que se toman muestras se denomina *frecuencia de muestreo*.
+
+```{python}
+#| label: fig4
+# | fig-cap: Muestreo de una señal analógica
+def fig4():
+    t = np.linspace(0,1,100)
+    y = np.sin(2*np.pi*t)
+    ts = np.linspace(0,1,6)
+    ys = np.sin(2*np.pi*ts)
+    with plt.rc_context(formato_1):
+        plt.figure(4)
+        plt.plot(t,y)
+        plt.plot(ts,ys,'ro')
+        plt.xlim(0,1)
+        plt.show()
+fig4()
+```
+
+----
+
+### Cuantización
+
+```{python}
+#| label: fig5
+# | fig-cap: Cuantización de muestras analógicas.
+qdivs = np.array([-1+k*2/16 for k in range(17)])
+qcentros =(qdivs[1:]+qdivs[:-1])/2
+
+def cuantiza(x):
+    "x-> indices,cod,valores,lim_izq,lim_der"
+    x=np.array(x)
+    indices = np.zeros(x.shape,"i")
+    cod = indices.copy()
+    valores = np.zeros(x.shape,qcentros.dtype)
+    lim_izq = np.zeros(x.shape,qdivs.dtype)
+    lim_der = lim_izq.copy()
+    for k in range(x.size):
+        i=max(np.searchsorted(qdivs,x.item(k))-1,0)
+        indices.itemset(k,i)
+        cod.itemset(k,i-len(qcentros)//2)
+        valores.itemset(k,qcentros[i])
+        lim_izq.itemset(k,qdivs[i])
+        lim_der.itemset(k,qdivs[i+1])
+    return indices,cod,valores,lim_izq,lim_der
+
+def fig5():
+    ts = np.linspace(0,1,6)
+    ys = np.sin(2*np.pi*ts)    
+    _,_,yq,_,_ = cuantiza(ys)
+    with plt.rc_context(formato_1):
+        plt.figure(5)
+        plt.plot(ts,ys,'o')
+        plt.plot(ts,yq,'rx')
+        plt.yticks(qdivs)
+        plt.grid(axis='y',which='major')
+        plt.xlim(0,1)
+        plt.show()
+# |-7|-6|-5|-4|-3|-2|-1| 0| 1| 2| 3| 4| 5| 6| 7|
+fig5()
+```
+
+----
+
+### Codificación
+
+```{python}
+#| label: fig6
+# | fig-cap: Codificación
+def nr_bin(x,nbits):
+    def digitos(x,nbits):
+        for k in range(nbits-1,-1,-1):
+            if x&(1<<k):
+                yield '1'
+            else:
+                yield '0'
+    return ''.join(digitos(int(x),nbits))
+def fig6():
+    ts = np.linspace(0,1,6)
+    ys = np.sin(2*np.pi*ts)
+    ks,cs,_,_,_ = cuantiza(ys)
+    text = [[k,f'{us:.4f}',uq,f'{n} -> "{nr_bin(n,4)}"'] for k,(us,uq,n) in enumerate(zip(ys,ks,cs))]
+    with plt.rc_context(formato_1):
+        plt.figure(6)
+        a = plt.gca()
+        a.axis("off")
+        plt.table(
+            cellText=text,
+            colLabels=["Nro. muestra","Tensión","Nr.Intervalo","Codigo"],
+            bbox=[0,0,1,1],
+            cellLoc="center")
+        plt.show()
+fig6()
+```
+
+## Conversión digital a analógica.
+
+- Recorremos las muestras digitales según la *frecuencia de muestreo*.
+- Modificamos una tensión o corriente de salida para que tome valores proporcionales a cada muestra.
+- Usamos un filtro para interpolar entre las muestras y obtener una variación suave.
+    - Esto se llama *reconstrucción*
+
+----
+
+```{python}
+#| label: fig7
+#| fig-cap: Conversión D/A f=1 fs=5
+import scipy.signal as signal
+def fig7(f=1,seno=True,fs=5):
+    tmin = -3
+    tmax = 6
+    Ns = (tmax-tmin)*fs+1
+    ts = np.linspace(tmin,tmax,Ns)
+    func = np.sin if seno else np.cos
+    ys = func(2*np.pi*f*ts)
+    _,_,yq,_,_ = cuantiza(ys)
+    interp = 20
+    paso = ts[1]-ts[0]
+    textra = (paso*(interp-1)/interp)
+    t = np.linspace(tmin,tmax+textra,Ns*interp)
+
+    y = np.repeat(yq,20)
+    sos = signal.butter(N=5,
+                        Wn=fs/2*1.1,
+                        btype='low',
+                        analog=False,
+                        output="sos",
+                        fs=fs*interp)
+    yf = signal.sosfiltfilt(sos,y)
+    fmt = formato_1|{
+          "lines.markeredgewidth":3,
+          "figure.figsize":[12,6*12/10]}
+    with plt.rc_context(fmt):
+        plt.figure(7)
+        plt.plot(t,func(2*np.pi*f*t),label="Original")
+        plt.plot(ts,yq,'x',label="Muestras")
+        plt.plot(t,y,label="Salida DAC")
+        plt.plot(t,yf,'--',label="Filtrado")
+        plt.xlim(0,3)
+        plt.legend(ncol=4,loc="lower center",bbox_to_anchor=(0.5,1))
+fig7()
+```
+----
+```{python}
+#| label: fig7_f2.5_sen
+#| fig-cap: Conversión D/A f=2.5 fs=5 (coseno)
+fig7(2.5,seno=False)
+```
+----
+```{python}
+#| label: fig7_f2.5_cos
+#| fig-cap: Conversión D/A f=2.5 fs=5 (seno)
+fig7(2.5)
+```
+
+----
+```{python}
+#| label: fig7_f3
+#| fig-cap: Conversión D/A f=3.5 fs=5
+fig7(3.5)
+```
+
+----
+```{python}
+#| label: fig7_f4
+#| fig-cap: Conversión D/A f=4 fs=5
+fig7(4)
+```
+
+----
+```{python}
+#| label: fig7_f5s
+#| fig-cap: Conversión D/A f=5 fs=5 (seno)
+fig7(5)
+```
+
+----
+```{python}
+#| label: fig7_f5c
+#| fig-cap: Conversión D/A f=5 fs=5 (coseno)
+fig7(5,False)
+```
+
+## Teorema de Nyquist-Shannon
+
+Es posible reconstruir perfectamente una señal analógica *limitada en ancho de banda* de ancho de banda $B$ a partir de muestras de la misma tomadas con frecuencia de muestreo $f_s$ **si y solo si**
+
+$$ f_s > 2B $$
+
+A la frecuencia límite se la denomina frecuencia de Nyquist
+
+$$f_n=\dfrac{f_s}{2}$$
+
+## Rango dinámico y error de cuantización
+
+El teorema de Nyquist-Shannon considera muestras tomadas con precisión infinita. En la práctica es necesario cuantizar las muestras para poder representarlas de forma digital. En ese caso se introduce una distorsión conocida como *ruido de cuantización* que limita el *rango dinámico* de la señal.
+
+----
+
+```{python}
+#| label: fig8
+#| fig-cap: Señal continua, señal cuantizada con 4 bits (16 intervalos) y ruido de cuantización.
+
+def fig8():
+    t = np.linspace(0,1,200)
+    y = np.sin(2*np.pi*t)
+    _,_,yq,_,_ = cuantiza(y)
+    
+    with plt.rc_context(formato_1):
+        plt.figure(8)
+        plt.plot(t,y)
+        plt.plot(t,yq)
+        plt.plot(t,yq-y)
+        plt.show()
+fig8()
+```
+
+
