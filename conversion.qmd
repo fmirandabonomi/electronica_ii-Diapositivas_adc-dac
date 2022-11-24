@@ -1,7 +1,8 @@
 ---
 title: "Representación digital de señales analógicas."
 subtitle: "Electrónica II para Ing. Electrónica."
-date: "24/11/2022"
+date: 2022-11-24
+date-format: iso
 author: "Fernando Alberto Miranda Bonomi"
 format: revealjs
 jupyter: python3
